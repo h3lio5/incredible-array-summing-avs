@@ -5,15 +5,15 @@ import (
 
 	opstateretriever "github.com/Layr-Labs/eigensdk-go/contracts/bindings/OperatorStateRetriever"
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator/types"
-	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator/types"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingingTaskManager"
 )
 
 // ====== TaskManager Mocks ======
 
-func MockSendNewTaskNumberToSquareCall(blockNum, taskNum, numberToSquare uint32) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
+func MockSendNewTaskArrayToSumCall(blockNum uint32, taskNum uint32, arrayToSum [3]uint64) (cstaskmanager.IIncredibleSummingTaskManagerTask, uint32, error) {
 	task := cstaskmanager.IIncredibleSquaringTaskManagerTask{
-		NumberToBeSquared:         big.NewInt(int64(numberToSquare)),
+		ArrayToBeSummed:           arrayToSum,
 		TaskCreatedBlock:          blockNum,
 		QuorumNumbers:             types.QUORUM_NUMBERS.UnderlyingType(),
 		QuorumThresholdPercentage: uint32(types.QUORUM_THRESHOLD_NUMERATOR),

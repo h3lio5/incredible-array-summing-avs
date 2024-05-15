@@ -18,9 +18,9 @@ import {IndexRegistry} from "@eigenlayer-middleware/src/IndexRegistry.sol";
 import {StakeRegistry} from "@eigenlayer-middleware/src/StakeRegistry.sol";
 import "@eigenlayer-middleware/src/OperatorStateRetriever.sol";
 
-import {IncredibleSquaringServiceManager, IServiceManager} from "../src/IncredibleSquaringServiceManager.sol";
-import {IncredibleSquaringTaskManager} from "../src/IncredibleSquaringTaskManager.sol";
-import {IIncredibleSquaringTaskManager} from "../src/IIncredibleSquaringTaskManager.sol";
+import {IncredibleSummingServiceManager, IServiceManager} from "../src/IncredibleSummingServiceManager.sol";
+import {IncredibleSummingTaskManager} from "../src/IncredibleSummingTaskManager.sol";
+import {IIncredibleSummingTaskManager} from "../src/IIncredibleSummingTaskManager.sol";
 import "../src/ERC20Mock.sol";
 
 import {Utils} from "./utils/Utils.sol";
@@ -31,8 +31,8 @@ import "forge-std/StdJson.sol";
 import "forge-std/console.sol";
 
 // # To deploy and verify our contract
-// forge script script/CredibleSquaringDeployer.s.sol:CredibleSquaringDeployer --rpc-url $RPC_URL  --private-key $PRIVATE_KEY --broadcast -vvvv
-contract IncredibleSquaringDeployer is Script, Utils {
+// forge script script/CredibleSummingDeployer.s.sol:CredibleSummingDeployer --rpc-url $RPC_URL  --private-key $PRIVATE_KEY --broadcast -vvvv
+contract IncredibleSummingDeployer is Script, Utils {
     // DEPLOYMENT CONSTANTS
     uint256 public constant QUORUM_THRESHOLD_PERCENTAGE = 100;
     uint32 public constant TASK_RESPONSE_WINDOW_BLOCK = 30;
@@ -48,9 +48,9 @@ contract IncredibleSquaringDeployer is Script, Utils {
     ERC20Mock public erc20Mock;
     StrategyBaseTVLLimits public erc20MockStrategy;
 
-    // Credible Squaring contracts
-    ProxyAdmin public incredibleSquaringProxyAdmin;
-    PauserRegistry public incredibleSquaringPauserReg;
+    // Credible Summing contracts
+    ProxyAdmin public incredibleSummingProxyAdmin;
+    PauserRegistry public incredibleSummingPauserReg;
 
     regcoord.RegistryCoordinator public registryCoordinator;
     regcoord.IRegistryCoordinator public registryCoordinatorImplementation;
@@ -66,12 +66,12 @@ contract IncredibleSquaringDeployer is Script, Utils {
 
     OperatorStateRetriever public operatorStateRetriever;
 
-    IncredibleSquaringServiceManager public incredibleSquaringServiceManager;
-    IServiceManager public incredibleSquaringServiceManagerImplementation;
+    IncredibleSummingServiceManager public incredibleSummingServiceManager;
+    IServiceManager public incredibleSummingServiceManagerImplementation;
 
-    IncredibleSquaringTaskManager public incredibleSquaringTaskManager;
-    IIncredibleSquaringTaskManager
-        public incredibleSquaringTaskManagerImplementation;
+    IncredibleSummingTaskManager public incredibleSummingTaskManager;
+    IIncredibleSummingTaskManager
+        public incredibleSummingTaskManagerImplementation;
 
     function run() external {
         // Eigenlayer contracts
@@ -115,8 +115,8 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 )
             );
 
-        address credibleSquaringCommunityMultisig = msg.sender;
-        address credibleSquaringPauser = msg.sender;
+        address credibleSummingCommunityMultisig = msg.sender;
+        address credibleSummingPauser = msg.sender;
 
         vm.startBroadcast();
         _deployErc20AndStrategyAndWhitelistStrategy(
@@ -125,12 +125,12 @@ contract IncredibleSquaringDeployer is Script, Utils {
             baseStrategyImplementation,
             strategyManager
         );
-        _deployCredibleSquaringContracts(
+        _deployCredibleSummingContracts(
             delegationManager,
             avsDirectory,
             erc20MockStrategy,
-            credibleSquaringCommunityMultisig,
-            credibleSquaringPauser
+            credibleSummingCommunityMultisig,
+            credibleSummingPauser
         );
         vm.stopBroadcast();
     }
@@ -169,12 +169,12 @@ contract IncredibleSquaringDeployer is Script, Utils {
         );
     }
 
-    function _deployCredibleSquaringContracts(
+    function _deployCredibleSummingContracts(
         IDelegationManager delegationManager,
         IAVSDirectory avsDirectory,
         IStrategy strat,
-        address incredibleSquaringCommunityMultisig,
-        address credibleSquaringPauser
+        address incredibleSummingCommunityMultisig,
+        address credibleSummingPauser
     ) internal {
         // Adding this as a temporary fix to make the rest of the script work with a single strategy
         // since it was originally written to work with an array of strategies
@@ -182,16 +182,16 @@ contract IncredibleSquaringDeployer is Script, Utils {
         uint numStrategies = deployedStrategyArray.length;
 
         // deploy proxy admin for ability to upgrade proxy contracts
-        incredibleSquaringProxyAdmin = new ProxyAdmin();
+        incredibleSummingProxyAdmin = new ProxyAdmin();
 
         // deploy pauser registry
         {
             address[] memory pausers = new address[](2);
-            pausers[0] = credibleSquaringPauser;
-            pausers[1] = incredibleSquaringCommunityMultisig;
-            incredibleSquaringPauserReg = new PauserRegistry(
+            pausers[0] = credibleSummingPauser;
+            pausers[1] = incredibleSummingCommunityMultisig;
+            incredibleSummingPauserReg = new PauserRegistry(
                 pausers,
-                incredibleSquaringCommunityMultisig
+                incredibleSummingCommunityMultisig
             );
         }
 
@@ -203,20 +203,20 @@ contract IncredibleSquaringDeployer is Script, Utils {
          * First, deploy upgradeable proxy contracts that **will point** to the implementations. Since the implementation contracts are
          * not yet deployed, we give these proxies an empty contract as the initial implementation, to act as if they have no code.
          */
-        incredibleSquaringServiceManager = IncredibleSquaringServiceManager(
+        incredibleSummingServiceManager = IncredibleSummingServiceManager(
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
         );
-        incredibleSquaringTaskManager = IncredibleSquaringTaskManager(
+        incredibleSummingTaskManager = IncredibleSummingTaskManager(
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
@@ -225,7 +225,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
@@ -234,7 +234,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
@@ -243,7 +243,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
@@ -252,7 +252,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(incredibleSquaringProxyAdmin),
+                    address(incredibleSummingProxyAdmin),
                     ""
                 )
             )
@@ -267,7 +267,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 delegationManager
             );
 
-            incredibleSquaringProxyAdmin.upgrade(
+            incredibleSummingProxyAdmin.upgrade(
                 TransparentUpgradeableProxy(payable(address(stakeRegistry))),
                 address(stakeRegistryImplementation)
             );
@@ -276,7 +276,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 registryCoordinator
             );
 
-            incredibleSquaringProxyAdmin.upgrade(
+            incredibleSummingProxyAdmin.upgrade(
                 TransparentUpgradeableProxy(payable(address(blsApkRegistry))),
                 address(blsApkRegistryImplementation)
             );
@@ -285,14 +285,14 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 registryCoordinator
             );
 
-            incredibleSquaringProxyAdmin.upgrade(
+            incredibleSummingProxyAdmin.upgrade(
                 TransparentUpgradeableProxy(payable(address(indexRegistry))),
                 address(indexRegistryImplementation)
             );
         }
 
         registryCoordinatorImplementation = new regcoord.RegistryCoordinator(
-            incredibleSquaringServiceManager,
+            incredibleSummingServiceManager,
             regcoord.IStakeRegistry(address(stakeRegistry)),
             regcoord.IBLSApkRegistry(address(blsApkRegistry)),
             regcoord.IIndexRegistry(address(indexRegistry))
@@ -338,7 +338,7 @@ contract IncredibleSquaringDeployer is Script, Utils {
                         });
                 }
             }
-            incredibleSquaringProxyAdmin.upgradeAndCall(
+            incredibleSummingProxyAdmin.upgradeAndCall(
                 TransparentUpgradeableProxy(
                     payable(address(registryCoordinator))
                 ),
@@ -346,10 +346,10 @@ contract IncredibleSquaringDeployer is Script, Utils {
                 abi.encodeWithSelector(
                     regcoord.RegistryCoordinator.initialize.selector,
                     // we set churnApprover and ejector to communityMultisig because we don't need them
-                    incredibleSquaringCommunityMultisig,
-                    incredibleSquaringCommunityMultisig,
-                    incredibleSquaringCommunityMultisig,
-                    incredibleSquaringPauserReg,
+                    incredibleSummingCommunityMultisig,
+                    incredibleSummingCommunityMultisig,
+                    incredibleSummingCommunityMultisig,
+                    incredibleSummingPauserReg,
                     0, // 0 initialPausedStatus means everything unpaused
                     quorumsOperatorSetParams,
                     quorumsMinimumStake,
@@ -358,35 +358,35 @@ contract IncredibleSquaringDeployer is Script, Utils {
             );
         }
 
-        incredibleSquaringServiceManagerImplementation = new IncredibleSquaringServiceManager(
+        incredibleSummingServiceManagerImplementation = new IncredibleSummingServiceManager(
             avsDirectory,
             registryCoordinator,
             stakeRegistry,
-            incredibleSquaringTaskManager
+            incredibleSummingTaskManager
         );
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
-        incredibleSquaringProxyAdmin.upgrade(
+        incredibleSummingProxyAdmin.upgrade(
             TransparentUpgradeableProxy(
-                payable(address(incredibleSquaringServiceManager))
+                payable(address(incredibleSummingServiceManager))
             ),
-            address(incredibleSquaringServiceManagerImplementation)
+            address(incredibleSummingServiceManagerImplementation)
         );
 
-        incredibleSquaringTaskManagerImplementation = new IncredibleSquaringTaskManager(
+        incredibleSummingTaskManagerImplementation = new IncredibleSummingTaskManager(
             registryCoordinator,
             TASK_RESPONSE_WINDOW_BLOCK
         );
 
         // Third, upgrade the proxy contracts to use the correct implementation contracts and initialize them.
-        incredibleSquaringProxyAdmin.upgradeAndCall(
+        incredibleSummingProxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(
-                payable(address(incredibleSquaringTaskManager))
+                payable(address(incredibleSummingTaskManager))
             ),
-            address(incredibleSquaringTaskManagerImplementation),
+            address(incredibleSummingTaskManagerImplementation),
             abi.encodeWithSelector(
-                incredibleSquaringTaskManager.initialize.selector,
-                incredibleSquaringPauserReg,
-                incredibleSquaringCommunityMultisig,
+                incredibleSummingTaskManager.initialize.selector,
+                incredibleSummingPauserReg,
+                incredibleSummingCommunityMultisig,
                 AGGREGATOR_ADDR,
                 TASK_GENERATOR_ADDR
             )
@@ -408,23 +408,23 @@ contract IncredibleSquaringDeployer is Script, Utils {
         );
         vm.serializeAddress(
             deployed_addresses,
-            "credibleSquaringServiceManager",
-            address(incredibleSquaringServiceManager)
+            "credibleSummingServiceManager",
+            address(incredibleSummingServiceManager)
         );
         vm.serializeAddress(
             deployed_addresses,
-            "credibleSquaringServiceManagerImplementation",
-            address(incredibleSquaringServiceManagerImplementation)
+            "credibleSummingServiceManagerImplementation",
+            address(incredibleSummingServiceManagerImplementation)
         );
         vm.serializeAddress(
             deployed_addresses,
-            "credibleSquaringTaskManager",
-            address(incredibleSquaringTaskManager)
+            "credibleSummingTaskManager",
+            address(incredibleSummingTaskManager)
         );
         vm.serializeAddress(
             deployed_addresses,
-            "credibleSquaringTaskManagerImplementation",
-            address(incredibleSquaringTaskManagerImplementation)
+            "credibleSummingTaskManagerImplementation",
+            address(incredibleSummingTaskManagerImplementation)
         );
         vm.serializeAddress(
             deployed_addresses,
@@ -449,6 +449,6 @@ contract IncredibleSquaringDeployer is Script, Utils {
             deployed_addresses_output
         );
 
-        writeOutput(finalJson, "credible_squaring_avs_deployment_output");
+        writeOutput(finalJson, "credible_Summing_avs_deployment_output");
     }
 }

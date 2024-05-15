@@ -2,14 +2,14 @@
 pragma solidity ^0.8.9;
 
 import "@eigenlayer/contracts/libraries/BytesLib.sol";
-import "./IIncredibleSquaringTaskManager.sol";
+import "./IIncredibleSummingTaskManager.sol";
 import "@eigenlayer-middleware/src/ServiceManagerBase.sol";
 
 /**
- * @title Primary entrypoint for procuring services from IncredibleSquaring.
+ * @title Primary entrypoint for procuring services from IncredibleSumming.
  * @author Layr Labs, Inc.
  */
-contract IncredibleSquaringServiceManager is ServiceManagerBase {
+contract IncredibleSummingServiceManager is ServiceManagerBase {
     using BytesLib for bytes;
 
     IIncredibleSummingTaskManager

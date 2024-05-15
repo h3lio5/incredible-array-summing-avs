@@ -9,8 +9,8 @@ import (
 
 	"github.com/urfave/cli"
 
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator"
+	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 )
 
 var (
@@ -25,9 +25,9 @@ func main() {
 	app := cli.NewApp()
 	app.Flags = config.Flags
 	app.Version = fmt.Sprintf("%s-%s-%s", Version, GitCommit, GitDate)
-	app.Name = "credible-squaring-aggregator"
-	app.Usage = "Credible Squaring Aggregator"
-	app.Description = "Service that sends number to be credibly squared by operator nodes."
+	app.Name = "credible-summing-aggregator"
+	app.Usage = "Credible summing Aggregator"
+	app.Description = "Service that sends array to be credibly summed by operator nodes."
 
 	app.Action = aggregatorMain
 	err := app.Run(os.Args)

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"os"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,6 +19,9 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/signerv2"
 
 	sdkutils "github.com/Layr-Labs/eigensdk-go/utils"
+
+	gsubrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	gsubsignature "github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 )
 
 // Config contains all of the configuration information for a credible squaring aggregators and challengers.
@@ -29,14 +33,17 @@ type Config struct {
 	EigenMetricsIpPortAddress string
 	// we need the url for the eigensdk currently... eventually standardize api so as to
 	// only take an ethclient or an rpcUrl (and build the ethclient at each constructor site)
-	EthHttpRpcUrl                             string
-	EthWsRpcUrl                               string
-	EthHttpClient                             eth.Client
-	EthWsClient                               eth.Client
-	OperatorStateRetrieverAddr                common.Address
-	IncredibleSquaringRegistryCoordinatorAddr common.Address
-	AggregatorServerIpPortAddr                string
-	RegisterOperatorOnStartup                 bool
+	EthHttpRpcUrl                            string
+	EthWsRpcUrl                              string
+	AvailAppId                               int
+	AvailApi                                 gsubrpc.SubstrateAPI
+	AvailKeyringPair                         gsubsignature.KeyringPair
+	EthHttpClient                            eth.Client
+	EthWsClient                              eth.Client
+	OperatorStateRetrieverAddr               common.Address
+	IncredibleSummingRegistryCoordinatorAddr common.Address
+	AggregatorServerIpPortAddr               string
+	RegisterOperatorOnStartup                bool
 	// json:"-" skips this field when marshaling (only used for logging to stdout), since SignerFn doesnt implement marshalJson
 	SignerFn          signerv2.SignerFn `json:"-"`
 	TxMgr             txmgr.TxManager
@@ -50,13 +57,16 @@ type ConfigRaw struct {
 	EthWsUrl                   string              `yaml:"eth_ws_url"`
 	AggregatorServerIpPortAddr string              `yaml:"aggregator_server_ip_port_address"`
 	RegisterOperatorOnStartup  bool                `yaml:"register_operator_on_startup"`
+	AvailSeed                  string              `yaml:"avail_seed"`
+	AvailApiUrl                string              `yaml:"avail_api_url"`
+	AvailAppId                 string              `yaml:"avail_app_id"`
 }
 
-// These are read from CredibleSquaringDeploymentFileFlag
-type IncredibleSquaringDeploymentRaw struct {
-	Addresses IncredibleSquaringContractsRaw `json:"addresses"`
+// These are read from CredibleSummingDeploymentFileFlag
+type IncredibleSummingDeploymentRaw struct {
+	Addresses IncredibleSummingContractsRaw `json:"addresses"`
 }
-type IncredibleSquaringContractsRaw struct {
+type IncredibleSummingContractsRaw struct {
 	RegistryCoordinatorAddr    string `json:"registryCoordinator"`
 	OperatorStateRetrieverAddr string `json:"operatorStateRetriever"`
 }
@@ -72,12 +82,12 @@ func NewConfig(ctx *cli.Context) (*Config, error) {
 		sdkutils.ReadYamlConfig(configFilePath, &configRaw)
 	}
 
-	var credibleSquaringDeploymentRaw IncredibleSquaringDeploymentRaw
-	credibleSquaringDeploymentFilePath := ctx.GlobalString(CredibleSquaringDeploymentFileFlag.Name)
-	if _, err := os.Stat(credibleSquaringDeploymentFilePath); errors.Is(err, os.ErrNotExist) {
-		panic("Path " + credibleSquaringDeploymentFilePath + " does not exist")
+	var credibleSummingDeploymentRaw IncredibleSummingDeploymentRaw
+	credibleSummingDeploymentFilePath := ctx.GlobalString(CredibleSummingDeploymentFileFlag.Name)
+	if _, err := os.Stat(credibleSummingDeploymentFilePath); errors.Is(err, os.ErrNotExist) {
+		panic("Path " + credibleSummingDeploymentFilePath + " does not exist")
 	}
-	sdkutils.ReadJsonConfig(credibleSquaringDeploymentFilePath, &credibleSquaringDeploymentRaw)
+	sdkutils.ReadJsonConfig(credibleSummingDeploymentFilePath, &credibleSummingDeploymentRaw)
 
 	logger, err := sdklogging.NewZapLogger(configRaw.Environment)
 	if err != nil {
@@ -93,6 +103,24 @@ func NewConfig(ctx *cli.Context) (*Config, error) {
 	ethWsClient, err := eth.NewClient(configRaw.EthWsUrl)
 	if err != nil {
 		logger.Errorf("Cannot create ws ethclient", "err", err)
+		return nil, err
+	}
+
+	availApi, err := gsubrpc.NewSubstrateAPI(configRaw.AvailApiUrl)
+	if err != nil {
+		logger.Errorf("cannot create avail api", "err", err)
+		return nil, err
+	}
+
+	availKeyringPair, err := gsubsignature.KeyringPairFromSecret(configRaw.AvailSeed, 42)
+	if err != nil {
+		logger.Errorf("cannot create KeyPair:%w", err)
+		return nil, err
+	}
+
+	availAppId, err := strconv.Atoi(configRaw.AvailAppId)
+	if err != nil {
+		logger.Errorf("cannot convert availAppId string to int", "err", err)
 		return nil, err
 	}
 
@@ -129,19 +157,22 @@ func NewConfig(ctx *cli.Context) (*Config, error) {
 	txMgr := txmgr.NewSimpleTxManager(skWallet, ethRpcClient, logger, aggregatorAddr)
 
 	config := &Config{
-		EcdsaPrivateKey:            ecdsaPrivateKey,
-		Logger:                     logger,
-		EthWsRpcUrl:                configRaw.EthWsUrl,
-		EthHttpRpcUrl:              configRaw.EthRpcUrl,
-		EthHttpClient:              ethRpcClient,
-		EthWsClient:                ethWsClient,
-		OperatorStateRetrieverAddr: common.HexToAddress(credibleSquaringDeploymentRaw.Addresses.OperatorStateRetrieverAddr),
-		IncredibleSquaringRegistryCoordinatorAddr: common.HexToAddress(credibleSquaringDeploymentRaw.Addresses.RegistryCoordinatorAddr),
-		AggregatorServerIpPortAddr:                configRaw.AggregatorServerIpPortAddr,
-		RegisterOperatorOnStartup:                 configRaw.RegisterOperatorOnStartup,
-		SignerFn:                                  signerV2,
-		TxMgr:                                     txMgr,
-		AggregatorAddress:                         aggregatorAddr,
+		EcdsaPrivateKey:                          ecdsaPrivateKey,
+		Logger:                                   logger,
+		EthWsRpcUrl:                              configRaw.EthWsUrl,
+		EthHttpRpcUrl:                            configRaw.EthRpcUrl,
+		EthHttpClient:                            ethRpcClient,
+		EthWsClient:                              ethWsClient,
+		AvailAppId:                               availAppId,
+		AvailApi:                                 *availApi,
+		AvailKeyringPair:                         availKeyringPair,
+		OperatorStateRetrieverAddr:               common.HexToAddress(credibleSummingDeploymentRaw.Addresses.OperatorStateRetrieverAddr),
+		IncredibleSummingRegistryCoordinatorAddr: common.HexToAddress(credibleSummingDeploymentRaw.Addresses.RegistryCoordinatorAddr),
+		AggregatorServerIpPortAddr:               configRaw.AggregatorServerIpPortAddr,
+		RegisterOperatorOnStartup:                configRaw.RegisterOperatorOnStartup,
+		SignerFn:                                 signerV2,
+		TxMgr:                                    txMgr,
+		AggregatorAddress:                        aggregatorAddr,
 	}
 	config.validate()
 	return config, nil
@@ -152,8 +183,8 @@ func (c *Config) validate() {
 	if c.OperatorStateRetrieverAddr == common.HexToAddress("") {
 		panic("Config: BLSOperatorStateRetrieverAddr is required")
 	}
-	if c.IncredibleSquaringRegistryCoordinatorAddr == common.HexToAddress("") {
-		panic("Config: IncredibleSquaringRegistryCoordinatorAddr is required")
+	if c.IncredibleSummingRegistryCoordinatorAddr == common.HexToAddress("") {
+		panic("Config: IncredibleSummingRegistryCoordinatorAddr is required")
 	}
 }
 
@@ -164,7 +195,7 @@ var (
 		Required: true,
 		Usage:    "Load configuration from `FILE`",
 	}
-	CredibleSquaringDeploymentFileFlag = cli.StringFlag{
+	CredibleSummingDeploymentFileFlag = cli.StringFlag{
 		Name:     "credible-squaring-deployment",
 		Required: true,
 		Usage:    "Load credible squaring contract addresses from `FILE`",
@@ -180,7 +211,7 @@ var (
 
 var requiredFlags = []cli.Flag{
 	ConfigFileFlag,
-	CredibleSquaringDeploymentFileFlag,
+	CredibleSummingDeploymentFileFlag,
 	EcdsaPrivateKeyFlag,
 }
 

@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"math/big"
 	"sync"
 	"time"
 
@@ -14,12 +13,16 @@ import (
 	blsagg "github.com/Layr-Labs/eigensdk-go/services/bls_aggregation"
 	oprsinfoserv "github.com/Layr-Labs/eigensdk-go/services/operatorsinfo"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator/types"
-	"github.com/Layr-Labs/incredible-squaring-avs/core"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/chainio"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator/types"
+	"github.com/h3lio5/incredible-array-summing-avs/core"
+	"github.com/h3lio5/incredible-array-summing-avs/core/chainio"
+	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 
-	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSummingTaskManager"
+
+	gsubrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	gsubsignature "github.com/centrifuge/go-substrate-rpc-client/v4/signature"
+	gsubtypes "github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
 const (
@@ -68,11 +71,15 @@ type Aggregator struct {
 	logger           logging.Logger
 	serverIpPortAddr string
 	avsWriter        chainio.AvsWriterer
+	// avail da related fields
+	availApi         gsubrpc.SubstrateAPI
+	availAppId       int
+	availKeyringPair gsubsignature.KeyringPair
 	// aggregation related fields
 	blsAggregationService blsagg.BlsAggregationService
-	tasks                 map[types.TaskIndex]cstaskmanager.IIncredibleSquaringTaskManagerTask
+	tasks                 map[types.TaskIndex]cstaskmanager.IIncredibleSummingTaskManagerTask
 	tasksMu               sync.RWMutex
-	taskResponses         map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse
+	taskResponses         map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSummingTaskManagerTaskResponse
 	taskResponsesMu       sync.RWMutex
 }
 
@@ -94,7 +101,7 @@ func NewAggregator(c *config.Config) (*Aggregator, error) {
 	chainioConfig := sdkclients.BuildAllConfig{
 		EthHttpUrl:                 c.EthHttpRpcUrl,
 		EthWsUrl:                   c.EthWsRpcUrl,
-		RegistryCoordinatorAddr:    c.IncredibleSquaringRegistryCoordinatorAddr.String(),
+		RegistryCoordinatorAddr:    c.IncredibleSummingRegistryCoordinatorAddr.String(),
 		OperatorStateRetrieverAddr: c.OperatorStateRetrieverAddr.String(),
 		AvsName:                    avsName,
 		PromMetricsIpPortAddress:   ":9090",
@@ -113,9 +120,12 @@ func NewAggregator(c *config.Config) (*Aggregator, error) {
 		logger:                c.Logger,
 		serverIpPortAddr:      c.AggregatorServerIpPortAddr,
 		avsWriter:             avsWriter,
+		availApi:              c.AvailApi,
+		availKeyringPair:      c.AvailKeyringPair,
+		availAppId:            c.AvailAppId,
 		blsAggregationService: blsAggregationService,
-		tasks:                 make(map[types.TaskIndex]cstaskmanager.IIncredibleSquaringTaskManagerTask),
-		taskResponses:         make(map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse),
+		tasks:                 make(map[types.TaskIndex]cstaskmanager.IIncredibleSummingTaskManagerTask),
+		taskResponses:         make(map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSummingTaskManagerTaskResponse),
 	}, nil
 }
 
@@ -128,10 +138,11 @@ func (agg *Aggregator) Start(ctx context.Context) error {
 	ticker := time.NewTicker(10 * time.Second)
 	agg.logger.Infof("Aggregator set to send new task every 10 seconds...")
 	defer ticker.Stop()
-	taskNum := int64(0)
+	taskNum := uint64(0)
 	// ticker doesn't tick immediately, so we send the first task here
 	// see https://github.com/golang/go/issues/17601
-	_ = agg.sendNewTask(big.NewInt(taskNum))
+	inputArray := [3]uint64{taskNum, taskNum, taskNum}
+	_ = agg.sendNewTask(inputArray)
 	taskNum++
 
 	for {
@@ -142,7 +153,8 @@ func (agg *Aggregator) Start(ctx context.Context) error {
 			agg.logger.Info("Received response from blsAggregationService", "blsAggServiceResp", blsAggServiceResp)
 			agg.sendAggregatedResponseToContract(blsAggServiceResp)
 		case <-ticker.C:
-			err := agg.sendNewTask(big.NewInt(taskNum))
+			inputArray := [3]uint64{taskNum, taskNum, taskNum}
+			err := agg.sendNewTask(inputArray)
 			taskNum++
 			if err != nil {
 				// we log the errors inside sendNewTask() so here we just continue to the next task
@@ -187,20 +199,28 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg
 	agg.taskResponsesMu.RLock()
 	taskResponse := agg.taskResponses[blsAggServiceResp.TaskIndex][blsAggServiceResp.TaskResponseDigest]
 	agg.taskResponsesMu.RUnlock()
-	_, err := agg.avsWriter.SendAggregatedResponse(context.Background(), task, taskResponse, nonSignerStakesAndSignature)
+	// TODO: instead of sending the (task, taskResponse, nonSignerStakesAndSignature) to the contract, serialize the tuple and submit it to avail da node.
+	// serialize (task, taskResponse, nonSignerStakesAndSignature) into a string
+	serializedData, err := serializeResult(task, taskResponse, nonSignerStakesAndSignature)
 	if err != nil {
-		agg.logger.Error("Aggregator failed to respond to task", "err", err)
+		agg.logger.Error("Aggregator failed to serialize the result", err)
+	}
+
+	// submit the serialized data to avail da node
+	_, err = agg.submitResultDataToAvailDA(serializedData)
+	if err != nil {
+		agg.logger.Errorf("Aggregator failed to respond to the task", "err", err)
 	}
 }
 
 // sendNewTask sends a new task to the task manager contract, and updates the Task dict struct
 // with the information of operators opted into quorum 0 at the block of task creation.
-func (agg *Aggregator) sendNewTask(numToSquare *big.Int) error {
-	agg.logger.Info("Aggregator sending new task", "numberToSquare", numToSquare)
+func (agg *Aggregator) sendNewTask(arrayToSum [3]uint64) error {
+	agg.logger.Info("Aggregator sending new task", "arrayToSum", arrayToSum)
 	// Send number to square to the task manager contract
-	newTask, taskIndex, err := agg.avsWriter.SendNewTaskNumberToSquare(context.Background(), numToSquare, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS)
+	newTask, taskIndex, err := agg.avsWriter.SendNewTaskArrayToSum(context.Background(), arrayToSum, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS)
 	if err != nil {
-		agg.logger.Error("Aggregator failed to send number to square", "err", err)
+		agg.logger.Error("Aggregator failed to send array to sum", err)
 		return err
 	}
 
@@ -221,4 +241,79 @@ func (agg *Aggregator) sendNewTask(numToSquare *big.Int) error {
 	}
 	agg.blsAggregationService.InitializeNewTask(taskIndex, newTask.TaskCreatedBlock, quorumNums, quorumThresholdPercentages, taskTimeToExpiry)
 	return nil
+}
+
+func serializeResult(task cstaskmanager.IIncredibleSummingTaskManagerTask, taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse, nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (string, error) {
+	return "a", nil
+}
+
+func (agg *Aggregator) submitResultDataToAvailDA(data string) (string, error) {
+
+	meta, err := agg.availApi.RPC.State.GetMetadataLatest()
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot get metadata:%w", err)
+		return "", err
+	}
+
+	c, err := gsubtypes.NewCall(meta, "DataAvailability.submit_data", gsubtypes.NewBytes([]byte(data)))
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot create new call:%w", err)
+		return "", nil
+	}
+
+	// Create the extrinsic
+	ext := gsubtypes.NewExtrinsic(c)
+
+	genesisHash, err := agg.availApi.RPC.Chain.GetBlockHash(0)
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot get block hash:%w", err)
+		return "", nil
+	}
+
+	rv, err := agg.availApi.RPC.State.GetRuntimeVersionLatest()
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot get runtime version:%w", err)
+		return "", nil
+	}
+
+	key, err := gsubtypes.CreateStorageKey(meta, "System", "Account", agg.availKeyringPair.PublicKey)
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot create storage key:%w", err)
+		return "", nil
+	}
+
+	var accountInfo gsubtypes.AccountInfo
+	ok, err := agg.availApi.RPC.State.GetStorageLatest(key, &accountInfo)
+	if err != nil || !ok {
+		agg.logger.Errorf("[Avail DA] cannot get latest storage:%w", err)
+		return "", nil
+	}
+
+	nonce := uint32(accountInfo.Nonce)
+	o := gsubtypes.SignatureOptions{
+		BlockHash:          genesisHash,
+		Era:                gsubtypes.ExtrinsicEra{IsMortalEra: false},
+		GenesisHash:        genesisHash,
+		Nonce:              gsubtypes.NewUCompactFromUInt(uint64(nonce)),
+		SpecVersion:        rv.SpecVersion,
+		Tip:                gsubtypes.NewUCompactFromUInt(0),
+		AppID:              gsubtypes.NewUCompactFromUInt(uint64(agg.availAppId)),
+		TransactionVersion: rv.TransactionVersion,
+	}
+
+	// Sign the transaction using Alice's default account
+	err = ext.Sign(agg.availKeyringPair, o)
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot sign:%w", err)
+		return "", nil
+	}
+
+	// Send the extrinsic
+	hash, err := agg.availApi.RPC.Author.SubmitExtrinsic(ext)
+	if err != nil {
+		agg.logger.Errorf("[Avail DA] cannot submit extrinsic:%w", err)
+		return "", nil
+	}
+
+	return hash.Hex(), nil
 }

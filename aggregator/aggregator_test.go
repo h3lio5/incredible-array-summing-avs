@@ -17,10 +17,10 @@ import (
 	blsaggservmock "github.com/Layr-Labs/eigensdk-go/services/mocks/blsagg"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator/mocks"
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator/types"
-	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSquaringTaskManager"
-	chainiomocks "github.com/Layr-Labs/incredible-squaring-avs/core/chainio/mocks"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator/mocks"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator/types"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	chainiomocks "github.com/h3lio5/incredible-array-summing-avs/core/chainio/mocks"
 )
 
 var MOCK_OPERATOR_ID = [32]byte{207, 73, 226, 221, 104, 100, 123, 41, 192, 3, 9, 119, 90, 83, 233, 159, 231, 151, 245, 96, 150, 48, 144, 27, 102, 253, 39, 101, 1, 26, 135, 173}
@@ -58,12 +58,12 @@ func TestSendNewTask(t *testing.T) {
 
 	var TASK_INDEX = uint32(0)
 	var BLOCK_NUMBER = uint32(100)
-	var NUMBER_TO_SQUARE = uint32(3)
-	var NUMBER_TO_SQUARE_BIG_INT = big.NewInt(int64(NUMBER_TO_SQUARE))
+	var ARRAY_NUMBER_TO_SUM = uint64(3)
+	var ARRAY_TO_SUM = [3]uint64{ARRAY_NUMBER_TO_SUM, ARRAY_NUMBER_TO_SUM, ARRAY_NUMBER_TO_SUM}
 
-	mockAvsWriterer.EXPECT().SendNewTaskNumberToSquare(
-		context.Background(), NUMBER_TO_SQUARE_BIG_INT, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS,
-	).Return(mocks.MockSendNewTaskNumberToSquareCall(BLOCK_NUMBER, TASK_INDEX, NUMBER_TO_SQUARE))
+	mockAvsWriterer.EXPECT().SendNewTaskArrayToSum(
+		context.Background(), ARRAY_TO_SUM, types.QUORUM_THRESHOLD_NUMERATOR, types.QUORUM_NUMBERS,
+	).Return(mocks.MockSendNewTaskArrayToSumCall(BLOCK_NUMBER, TASK_INDEX, ARRAY_TO_SUM))
 
 	// 100 blocks, each takes 12 seconds. We hardcode for now since aggregator also hardcodes this value
 	taskTimeToExpiry := 100 * 12 * time.Second
@@ -72,7 +72,7 @@ func TestSendNewTask(t *testing.T) {
 	// see https://hynek.me/articles/what-to-mock-in-5-mins/
 	mockBlsAggService.EXPECT().InitializeNewTask(TASK_INDEX, BLOCK_NUMBER, types.QUORUM_NUMBERS, sdktypes.QuorumThresholdPercentages{types.QUORUM_THRESHOLD_NUMERATOR}, taskTimeToExpiry)
 
-	err = aggregator.sendNewTask(NUMBER_TO_SQUARE_BIG_INT)
+	err = aggregator.sendNewTask(ARRAY_TO_SUM)
 	assert.Nil(t, err)
 }
 

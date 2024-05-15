@@ -81,7 +81,7 @@ contract IncredibleSummingTaskManager is
     /* FUNCTIONS */
     // NOTE: this function creates new task, assigns it a taskId
     function createNewTask(
-        uint256[] arrayToBeSummed,
+        uint64[3] calldata arrayToBeSummed,
         uint32 quorumThresholdPercentage,
         bytes calldata quorumNumbers
     ) external onlyTaskGenerator {
@@ -180,7 +180,7 @@ contract IncredibleSummingTaskManager is
         BN254.G1Point[] memory pubkeysOfNonSigningOperators
     ) external {
         uint32 referenceTaskIndex = taskResponse.referenceTaskIndex;
-        uint256[] memory arrayToBeSummed = task.arrayToBeSummed;
+        uint64[3] calldata arrayToBeSummed = task.arrayToBeSummed;
         // some logical checks
         require(
             allTaskResponses[referenceTaskIndex] != bytes32(0),
@@ -204,8 +204,8 @@ contract IncredibleSummingTaskManager is
         );
 
         // logic for checking whether challenge is valid or not
-        uint256 actualSummedOutput = 0;
-        for (uint i = 0; i < arrayToBeSummed.length; i++) {
+        uint64 actualSummedOutput = 0;
+        for (uint64 i = 0; i < arrayToBeSummed.length; i++) {
             actualSummedOutput += arrayToBeSummed[i];
         }
         bool isResponseCorrect = (actualSummedOutput ==
