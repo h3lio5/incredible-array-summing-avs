@@ -1,4 +1,4 @@
-module github.com/Layr-Labs/incredible-squaring-avs
+module github.com/h3lio5/incredible-array-summing-avs
 
 go 1.21
 
