@@ -50,7 +50,7 @@ type AvsWriter struct {
 var _ AvsWriterer = (*AvsWriter)(nil)
 
 func BuildAvsWriterFromConfig(c *config.Config) (*AvsWriter, error) {
-	return BuildAvsWriter(c.TxMgr, c.IncredibleSquaringRegistryCoordinatorAddr, c.OperatorStateRetrieverAddr, c.EthHttpClient, c.Logger)
+	return BuildAvsWriter(c.TxMgr, c.IncredibleSummingRegistryCoordinatorAddr, c.OperatorStateRetrieverAddr, c.EthHttpClient, c.Logger)
 }
 
 func BuildAvsWriter(txMgr txmgr.TxManager, registryCoordinatorAddr, operatorStateRetrieverAddr gethcommon.Address, ethHttpClient eth.Client, logger logging.Logger) (*AvsWriter, error) {
