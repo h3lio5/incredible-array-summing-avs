@@ -27,11 +27,11 @@ func TestOperator(t *testing.T) {
 	const taskIndex = 1
 
 	t.Run("ProcessNewTaskCreatedLog", func(t *testing.T) {
-		var numberToBeSquared = big.NewInt(3)
+		var arrayToBeSummed = [3]uint64{1, 1, 1}
 		newTaskCreatedLog := &cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated{
 			TaskIndex: taskIndex,
 			Task: cstaskmanager.IIncredibleSummingTaskManagerTask{
-				NumberToBeSquared:         numberToBeSquared,
+				ArrayToBeSummed:           arrayToBeSummed,
 				TaskCreatedBlock:          1000,
 				QuorumNumbers:             aggtypes.QUORUM_NUMBERS.UnderlyingType(),
 				QuorumThresholdPercentage: uint32(aggtypes.QUORUM_THRESHOLD_NUMERATOR),
@@ -39,22 +39,25 @@ func TestOperator(t *testing.T) {
 			Raw: types.Log{},
 		}
 		got := operator.ProcessNewTaskCreatedLog(newTaskCreatedLog)
-		numberSquared := big.NewInt(0).Mul(numberToBeSquared, numberToBeSquared)
+		arraySummed := uint64(0)
+		for _, num := range newTaskCreatedLog.Task.ArrayToBeSummed {
+			arraySummed += num
+		}
 		want := &cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 			ReferenceTaskIndex: taskIndex,
-			NumberSquared:      numberSquared,
+			ArraySummed:        arraySummed,
 		}
 		assert.Equal(t, got, want)
 	})
 
 	t.Run("Start", func(t *testing.T) {
-		var numberToBeSquared = big.NewInt(3)
+		var arrayToBeSummed = [3]uint64{3, 3, 3}
 
 		// new task event
 		newTaskCreatedEvent := &cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated{
 			TaskIndex: taskIndex,
 			Task: cstaskmanager.IIncredibleSummingTaskManagerTask{
-				NumberToBeSquared:         numberToBeSquared,
+				ArrayToBeSummed:           arrayToBeSummed,
 				TaskCreatedBlock:          1000,
 				QuorumNumbers:             aggtypes.QUORUM_NUMBERS.UnderlyingType(),
 				QuorumThresholdPercentage: uint32(aggtypes.QUORUM_THRESHOLD_NUMERATOR),
@@ -67,10 +70,15 @@ func TestOperator(t *testing.T) {
 		Y, ok := big.NewInt(0).SetString("15243507701692917330954619280683582177901049846125926696838777109165913318327", 10)
 		assert.True(t, ok)
 
+		arraySummed := uint64(0)
+		for _, num := range arrayToBeSummed {
+			arraySummed += num
+		}
+
 		signedTaskResponse := &aggregator.SignedTaskResponse{
 			TaskResponse: cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 				ReferenceTaskIndex: taskIndex,
-				NumberSquared:      big.NewInt(0).Mul(numberToBeSquared, numberToBeSquared),
+				ArraySummed:        arraySummed,
 			},
 			BlsSignature: bls.Signature{
 				G1Point: bls.NewG1Point(X, Y),

@@ -30,7 +30,7 @@ var MOCK_OPERATOR_BLS_PRIVATE_KEY_STRING = "50"
 type MockTask struct {
 	TaskNum     uint32
 	BlockNumber uint32
-	ArrayToSum  uint32
+	ArrayToSum  [3]uint64
 }
 
 func TestSendNewTask(t *testing.T) {

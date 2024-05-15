@@ -6,7 +6,7 @@ import (
 	opstateretriever "github.com/Layr-Labs/eigensdk-go/contracts/bindings/OperatorStateRetriever"
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	"github.com/h3lio5/incredible-array-summing-avs/aggregator/types"
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingingTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 )
 
 // ====== TaskManager Mocks ======

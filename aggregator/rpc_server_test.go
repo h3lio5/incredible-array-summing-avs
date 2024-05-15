@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -22,7 +21,7 @@ func TestProcessSignedTaskResponse(t *testing.T) {
 
 	var TASK_INDEX = uint32(0)
 	var BLOCK_NUMBER = uint32(100)
-	var NUMBER_TO_SQUARE = uint32(3)
+	var ARRAY_TO_SUM = [3]uint64{1, 1, 1}
 
 	MOCK_OPERATOR_BLS_PRIVATE_KEY, err := bls.NewPrivateKey(MOCK_OPERATOR_BLS_PRIVATE_KEY_STRING)
 	assert.Nil(t, err)
@@ -45,7 +44,7 @@ func TestProcessSignedTaskResponse(t *testing.T) {
 	signedTaskResponse, err := createMockSignedTaskResponse(MockTask{
 		TaskNum:     TASK_INDEX,
 		BlockNumber: BLOCK_NUMBER,
-		ArrayToSum:  NUMBER_TO_SQUARE,
+		ArrayToSum:  ARRAY_TO_SUM,
 	}, *MOCK_OPERATOR_KEYPAIR)
 	assert.Nil(t, err)
 	signedTaskResponseDigest, err := core.GetTaskResponseDigest(&signedTaskResponse.TaskResponse)
@@ -62,10 +61,13 @@ func TestProcessSignedTaskResponse(t *testing.T) {
 
 // mocks an operator signing on a task response
 func createMockSignedTaskResponse(mockTask MockTask, keypair bls.KeyPair) (*SignedTaskResponse, error) {
-	ArrayToSumBigInt := big.NewInt(int64(mockTask.ArrayToSum))
+	arraySummed := uint64(0)
+	for _, num := range mockTask.ArrayToSum {
+		arraySummed += num
+	}
 	taskResponse := &cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 		ReferenceTaskIndex: mockTask.TaskNum,
-		NumberSquared:      ArrayToSumBigInt.Mul(ArrayToSumBigInt, ArrayToSumBigInt),
+		ArraySummed:        arraySummed,
 	}
 	taskResponseHash, err := core.GetTaskResponseDigest(taskResponse)
 	if err != nil {

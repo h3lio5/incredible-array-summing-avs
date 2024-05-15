@@ -3,7 +3,6 @@ package operator
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"os"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -34,7 +33,7 @@ import (
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 )
 
-const AVS_NAME = "incredible-squaring"
+const AVS_NAME = "incredible-summing"
 const SEM_VER = "0.0.1"
 
 type Operator struct {
@@ -311,16 +310,19 @@ func (o *Operator) Start(ctx context.Context) error {
 func (o *Operator) ProcessNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated) *cstaskmanager.IIncredibleSummingTaskManagerTaskResponse {
 	o.logger.Debug("Received new task", "task", newTaskCreatedLog)
 	o.logger.Info("Received new task",
-		"numberToBeSquared", newTaskCreatedLog.Task.NumberToBeSquared,
+		"ArrayToBeSummed", newTaskCreatedLog.Task.ArrayToBeSummed,
 		"taskIndex", newTaskCreatedLog.TaskIndex,
 		"taskCreatedBlock", newTaskCreatedLog.Task.TaskCreatedBlock,
 		"quorumNumbers", newTaskCreatedLog.Task.QuorumNumbers,
 		"QuorumThresholdPercentage", newTaskCreatedLog.Task.QuorumThresholdPercentage,
 	)
-	numberSquared := big.NewInt(0).Exp(newTaskCreatedLog.Task.NumberToBeSquared, big.NewInt(2), nil)
+	arraySummed := uint64(0)
+	for _, num := range newTaskCreatedLog.Task.ArrayToBeSummed {
+		arraySummed += num
+	}
 	taskResponse := &cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 		ReferenceTaskIndex: newTaskCreatedLog.TaskIndex,
-		NumberSquared:      numberSquared,
+		ArraySummed:        arraySummed,
 	}
 	return taskResponse
 }
