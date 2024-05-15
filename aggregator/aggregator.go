@@ -18,7 +18,7 @@ import (
 	"github.com/h3lio5/incredible-array-summing-avs/core/chainio"
 	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 
-	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSummingTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 
 	gsubrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	gsubsignature "github.com/centrifuge/go-substrate-rpc-client/v4/signature"
