@@ -4,8 +4,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Layr-Labs/incredible-squaring-avs/cli/actions"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
+	"github.com/h3lio5/incredible-array-summing-avs/cli/actions"
+	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 	"github.com/urfave/cli"
 )
 

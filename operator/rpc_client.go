@@ -5,8 +5,8 @@ import (
 	"net/rpc"
 	"time"
 
-	"github.com/Layr-Labs/incredible-squaring-avs/aggregator"
-	"github.com/Layr-Labs/incredible-squaring-avs/metrics"
+	"github.com/h3lio5/incredible-array-summing-avs/aggregator"
+	"github.com/h3lio5/incredible-array-summing-avs/metrics"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )

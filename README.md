@@ -1,6 +1,6 @@
 # Incredible Squaring AVS
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/Layr-Labs/incredible-squaring-avs)](https://goreportcard.com/report/github.com/Layr-Labs/incredible-squaring-avs)
+[![Go Report Card](https://goreportcard.com/badge/github.com/h3lio5/incredible-array-summing-avs)](https://goreportcard.com/report/github.com/h3lio5/incredible-array-summing-avs)
 
 <b> Do not use it in Production, testnet only. </b>
 

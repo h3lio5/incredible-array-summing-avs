@@ -5,9 +5,9 @@ import (
 	"log"
 
 	sdkutils "github.com/Layr-Labs/eigensdk-go/utils"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
-	"github.com/Layr-Labs/incredible-squaring-avs/operator"
-	"github.com/Layr-Labs/incredible-squaring-avs/types"
+	"github.com/h3lio5/incredible-array-summing-avs/core/config"
+	"github.com/h3lio5/incredible-array-summing-avs/operator"
+	"github.com/h3lio5/incredible-array-summing-avs/types"
 	"github.com/urfave/cli"
 )
 

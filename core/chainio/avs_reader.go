@@ -10,9 +10,9 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	logging "github.com/Layr-Labs/eigensdk-go/logging"
 
-	erc20mock "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/ERC20Mock"
-	cstaskmanager "github.com/Layr-Labs/incredible-squaring-avs/contracts/bindings/IncredibleSummingTaskManager"
-	"github.com/Layr-Labs/incredible-squaring-avs/core/config"
+	erc20mock "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/ERC20Mock"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
+	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 )
 
 type AvsReaderer interface {
