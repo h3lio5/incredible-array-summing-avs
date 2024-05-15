@@ -43,9 +43,9 @@ func TestProcessSignedTaskResponse(t *testing.T) {
 	assert.Nil(t, err)
 
 	signedTaskResponse, err := createMockSignedTaskResponse(MockTask{
-		TaskNum:        TASK_INDEX,
-		BlockNumber:    BLOCK_NUMBER,
-		NumberToSquare: NUMBER_TO_SQUARE,
+		TaskNum:     TASK_INDEX,
+		BlockNumber: BLOCK_NUMBER,
+		ArrayToSum:  NUMBER_TO_SQUARE,
 	}, *MOCK_OPERATOR_KEYPAIR)
 	assert.Nil(t, err)
 	signedTaskResponseDigest, err := core.GetTaskResponseDigest(&signedTaskResponse.TaskResponse)
@@ -62,10 +62,10 @@ func TestProcessSignedTaskResponse(t *testing.T) {
 
 // mocks an operator signing on a task response
 func createMockSignedTaskResponse(mockTask MockTask, keypair bls.KeyPair) (*SignedTaskResponse, error) {
-	numberToSquareBigInt := big.NewInt(int64(mockTask.NumberToSquare))
+	ArrayToSumBigInt := big.NewInt(int64(mockTask.ArrayToSum))
 	taskResponse := &cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 		ReferenceTaskIndex: mockTask.TaskNum,
-		NumberSquared:      numberToSquareBigInt.Mul(numberToSquareBigInt, numberToSquareBigInt),
+		NumberSquared:      ArrayToSumBigInt.Mul(ArrayToSumBigInt, ArrayToSumBigInt),
 	}
 	taskResponseHash, err := core.GetTaskResponseDigest(taskResponse)
 	if err != nil {

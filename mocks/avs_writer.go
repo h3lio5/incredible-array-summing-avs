@@ -5,6 +5,7 @@
 //
 //	mockgen -destination=./mocks/avs_writer.go -package=mocks github.com/h3lio5/incredible-array-summing-avs/core/chainio AvsWriterer
 //
+
 // Package mocks is a generated GoMock package.
 package mocks
 
@@ -17,9 +18,9 @@ import (
 	contractRegistryCoordinator "github.com/Layr-Labs/eigensdk-go/contracts/bindings/RegistryCoordinator"
 	bls "github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	types "github.com/Layr-Labs/eigensdk-go/types"
-	contractIncredibleSummingTaskManager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 	common "github.com/ethereum/go-ethereum/common"
 	types0 "github.com/ethereum/go-ethereum/core/types"
+	contractIncredibleSummingTaskManager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 	gomock "go.uber.org/mock/gomock"
 )
 

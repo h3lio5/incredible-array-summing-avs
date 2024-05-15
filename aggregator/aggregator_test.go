@@ -28,9 +28,9 @@ var MOCK_OPERATOR_STAKE = big.NewInt(100)
 var MOCK_OPERATOR_BLS_PRIVATE_KEY_STRING = "50"
 
 type MockTask struct {
-	TaskNum        uint32
-	BlockNumber    uint32
-	NumberToSquare uint32
+	TaskNum     uint32
+	BlockNumber uint32
+	ArrayToSum  uint32
 }
 
 func TestSendNewTask(t *testing.T) {
