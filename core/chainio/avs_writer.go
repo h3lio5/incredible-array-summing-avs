@@ -24,17 +24,17 @@ type AvsWriterer interface {
 		arrayToSum [3]uint64,
 		quorumThresholdPercentage sdktypes.QuorumThresholdPercentage,
 		quorumNumbers sdktypes.QuorumNums,
-	) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error)
+	) (cstaskmanager.IIncredibleSummingTaskManagerTask, uint32, error)
 	RaiseChallenge(
 		ctx context.Context,
-		task cstaskmanager.IIncredibleSquaringTaskManagerTask,
-		taskResponse cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse,
-		taskResponseMetadata cstaskmanager.IIncredibleSquaringTaskManagerTaskResponseMetadata,
+		task cstaskmanager.IIncredibleSummingTaskManagerTask,
+		taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
+		taskResponseMetadata cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata,
 		pubkeysOfNonSigningOperators []cstaskmanager.BN254G1Point,
 	) (*types.Receipt, error)
 	SendAggregatedResponse(ctx context.Context,
-		task cstaskmanager.IIncredibleSquaringTaskManagerTask,
-		taskResponse cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse,
+		task cstaskmanager.IIncredibleSummingTaskManagerTask,
+		taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
 		nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature,
 	) (*types.Receipt, error)
 }
@@ -75,7 +75,7 @@ func NewAvsWriter(avsRegistryWriter avsregistry.AvsRegistryWriter, avsServiceBin
 }
 
 // returns the tx receipt, as well as the task index (which it gets from parsing the tx receipt logs)
-func (w *AvsWriter) SendNewTaskArrayToSum(ctx context.Context, arrayToSum [3]uint64, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSquaringTaskManagerTask, uint32, error) {
+func (w *AvsWriter) SendNewTaskArrayToSum(ctx context.Context, arrayToSum [3]uint64, quorumThresholdPercentage sdktypes.QuorumThresholdPercentage, quorumNumbers sdktypes.QuorumNums) (cstaskmanager.IIncredibleSummingTaskManagerTask, uint32, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
 		w.logger.Errorf("Error getting tx opts")
@@ -100,8 +100,8 @@ func (w *AvsWriter) SendNewTaskArrayToSum(ctx context.Context, arrayToSum [3]uin
 }
 
 func (w *AvsWriter) SendAggregatedResponse(
-	ctx context.Context, task cstaskmanager.IIncredibleSquaringTaskManagerTask,
-	taskResponse cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse,
+	ctx context.Context, task cstaskmanager.IIncredibleSummingTaskManagerTask,
+	taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
 	nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature,
 ) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
@@ -124,9 +124,9 @@ func (w *AvsWriter) SendAggregatedResponse(
 
 func (w *AvsWriter) RaiseChallenge(
 	ctx context.Context,
-	task cstaskmanager.IIncredibleSquaringTaskManagerTask,
-	taskResponse cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse,
-	taskResponseMetadata cstaskmanager.IIncredibleSquaringTaskManagerTaskResponseMetadata,
+	task cstaskmanager.IIncredibleSummingTaskManagerTask,
+	taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
+	taskResponseMetadata cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata,
 	pubkeysOfNonSigningOperators []cstaskmanager.BN254G1Point,
 ) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()

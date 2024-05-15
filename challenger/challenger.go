@@ -12,7 +12,7 @@ import (
 	"github.com/h3lio5/incredible-array-summing-avs/core/config"
 
 	"github.com/h3lio5/incredible-array-summing-avs/challenger/types"
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 	"github.com/h3lio5/incredible-array-summing-avs/core/chainio"
 )
 
@@ -22,10 +22,10 @@ type Challenger struct {
 	avsReader          chainio.AvsReaderer
 	avsWriter          chainio.AvsWriterer
 	avsSubscriber      chainio.AvsSubscriberer
-	tasks              map[uint32]cstaskmanager.IIncredibleSquaringTaskManagerTask
+	tasks              map[uint32]cstaskmanager.IIncredibleSummingTaskManagerTask
 	taskResponses      map[uint32]types.TaskResponseData
-	taskResponseChan   chan *cstaskmanager.ContractIncredibleSquaringTaskManagerTaskResponded
-	newTaskCreatedChan chan *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated
+	taskResponseChan   chan *cstaskmanager.ContractIncredibleSummingTaskManagerTaskResponded
+	newTaskCreatedChan chan *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated
 }
 
 func NewChallenger(c *config.Config) (*Challenger, error) {
@@ -52,10 +52,10 @@ func NewChallenger(c *config.Config) (*Challenger, error) {
 		avsWriter:          avsWriter,
 		avsReader:          avsReader,
 		avsSubscriber:      avsSubscriber,
-		tasks:              make(map[uint32]cstaskmanager.IIncredibleSquaringTaskManagerTask),
+		tasks:              make(map[uint32]cstaskmanager.IIncredibleSummingTaskManagerTask),
 		taskResponses:      make(map[uint32]types.TaskResponseData),
-		taskResponseChan:   make(chan *cstaskmanager.ContractIncredibleSquaringTaskManagerTaskResponded),
-		newTaskCreatedChan: make(chan *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated),
+		taskResponseChan:   make(chan *cstaskmanager.ContractIncredibleSummingTaskManagerTaskResponded),
+		newTaskCreatedChan: make(chan *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated),
 	}
 
 	return challenger, nil
@@ -112,12 +112,12 @@ func (c *Challenger) Start(ctx context.Context) error {
 
 }
 
-func (c *Challenger) processNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated) uint32 {
+func (c *Challenger) processNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated) uint32 {
 	c.tasks[newTaskCreatedLog.TaskIndex] = newTaskCreatedLog.Task
 	return newTaskCreatedLog.TaskIndex
 }
 
-func (c *Challenger) processTaskResponseLog(taskResponseLog *cstaskmanager.ContractIncredibleSquaringTaskManagerTaskResponded) uint32 {
+func (c *Challenger) processTaskResponseLog(taskResponseLog *cstaskmanager.ContractIncredibleSummingTaskManagerTaskResponded) uint32 {
 	taskResponseRawLog, err := c.avsSubscriber.ParseTaskResponded(taskResponseLog.Raw)
 	if err != nil {
 		c.logger.Error("Error parsing task response. skipping task (this is probably bad and should be investigated)", "err", err)
@@ -152,7 +152,7 @@ func (c *Challenger) callChallengeModule(taskIndex uint32) error {
 	return types.NoErrorInTaskResponse
 }
 
-func (c *Challenger) getNonSigningOperatorPubKeys(vLog *cstaskmanager.ContractIncredibleSquaringTaskManagerTaskResponded) []cstaskmanager.BN254G1Point {
+func (c *Challenger) getNonSigningOperatorPubKeys(vLog *cstaskmanager.ContractIncredibleSummingTaskManagerTaskResponded) []cstaskmanager.BN254G1Point {
 	c.logger.Info("vLog.Raw is", "vLog.Raw", vLog.Raw)
 
 	// get the nonSignerStakesAndSignature
@@ -168,7 +168,7 @@ func (c *Challenger) getNonSigningOperatorPubKeys(vLog *cstaskmanager.ContractIn
 	}
 	calldata := tx.Data()
 	c.logger.Info("calldata", "calldata", calldata)
-	cstmAbi, err := abi.JSON(bytes.NewReader(common.IncredibleSquaringTaskManagerAbi))
+	cstmAbi, err := abi.JSON(bytes.NewReader(common.IncredibleSummingTaskManagerAbi))
 	if err != nil {
 		c.logger.Error("Error getting Abi", "err", err)
 	}

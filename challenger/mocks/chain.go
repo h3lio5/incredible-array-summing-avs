@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 )
 
 func MockTransactionByHash() *gethtypes.Transaction {
@@ -76,6 +76,6 @@ func MockTaskResponseLog() gethtypes.Log {
 	}
 }
 
-func MockTaskResponseReferenceTaskIndex(taskResponse cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse) uint32 {
+func MockTaskResponseReferenceTaskIndex(taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse) uint32 {
 	return taskResponse.ReferenceTaskIndex
 }

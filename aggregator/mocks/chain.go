@@ -12,7 +12,7 @@ import (
 // ====== TaskManager Mocks ======
 
 func MockSendNewTaskArrayToSumCall(blockNum uint32, taskNum uint32, arrayToSum [3]uint64) (cstaskmanager.IIncredibleSummingTaskManagerTask, uint32, error) {
-	task := cstaskmanager.IIncredibleSquaringTaskManagerTask{
+	task := cstaskmanager.IIncredibleSummingTaskManagerTask{
 		ArrayToBeSummed:           arrayToSum,
 		TaskCreatedBlock:          blockNum,
 		QuorumNumbers:             types.QUORUM_NUMBERS.UnderlyingType(),

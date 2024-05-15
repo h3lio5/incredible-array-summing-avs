@@ -11,7 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/h3lio5/incredible-array-summing-avs/aggregator"
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 	"github.com/h3lio5/incredible-array-summing-avs/core"
 	"github.com/h3lio5/incredible-array-summing-avs/core/chainio"
 	"github.com/h3lio5/incredible-array-summing-avs/metrics"
@@ -58,13 +58,13 @@ type Operator struct {
 	operatorId       sdktypes.OperatorId
 	operatorAddr     common.Address
 	// receive new tasks in this chan (typically from listening to onchain event)
-	newTaskCreatedChan chan *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated
+	newTaskCreatedChan chan *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated
 	// ip address of aggregator
 	aggregatorServerIpPortAddr string
 	// rpc client to send signed task responses to aggregator
 	aggregatorRpcClient AggregatorRpcClienter
 	// needed when opting in to avs (allow this service manager contract to slash operator)
-	credibleSquaringServiceManagerAddr common.Address
+	credibleSummingServiceManagerAddr common.Address
 }
 
 // TODO(samlaf): config is a mess right now, since the chainio client constructors
@@ -211,24 +211,24 @@ func NewOperatorFromConfig(c types.NodeConfig) (*Operator, error) {
 	}
 
 	operator := &Operator{
-		config:                             c,
-		logger:                             logger,
-		metricsReg:                         reg,
-		metrics:                            avsAndEigenMetrics,
-		nodeApi:                            nodeApi,
-		ethClient:                          ethRpcClient,
-		avsWriter:                          avsWriter,
-		avsReader:                          avsReader,
-		avsSubscriber:                      avsSubscriber,
-		eigenlayerReader:                   sdkClients.ElChainReader,
-		eigenlayerWriter:                   sdkClients.ElChainWriter,
-		blsKeypair:                         blsKeyPair,
-		operatorAddr:                       common.HexToAddress(c.OperatorAddress),
-		aggregatorServerIpPortAddr:         c.AggregatorServerIpPortAddress,
-		aggregatorRpcClient:                aggregatorRpcClient,
-		newTaskCreatedChan:                 make(chan *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated),
-		credibleSquaringServiceManagerAddr: common.HexToAddress(c.AVSRegistryCoordinatorAddress),
-		operatorId:                         [32]byte{0}, // this is set below
+		config:                            c,
+		logger:                            logger,
+		metricsReg:                        reg,
+		metrics:                           avsAndEigenMetrics,
+		nodeApi:                           nodeApi,
+		ethClient:                         ethRpcClient,
+		avsWriter:                         avsWriter,
+		avsReader:                         avsReader,
+		avsSubscriber:                     avsSubscriber,
+		eigenlayerReader:                  sdkClients.ElChainReader,
+		eigenlayerWriter:                  sdkClients.ElChainWriter,
+		blsKeypair:                        blsKeyPair,
+		operatorAddr:                      common.HexToAddress(c.OperatorAddress),
+		aggregatorServerIpPortAddr:        c.AggregatorServerIpPortAddress,
+		aggregatorRpcClient:               aggregatorRpcClient,
+		newTaskCreatedChan:                make(chan *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated),
+		credibleSummingServiceManagerAddr: common.HexToAddress(c.AVSRegistryCoordinatorAddress),
+		operatorId:                        [32]byte{0}, // this is set below
 
 	}
 
@@ -308,7 +308,7 @@ func (o *Operator) Start(ctx context.Context) error {
 
 // Takes a NewTaskCreatedLog struct as input and returns a TaskResponseHeader struct.
 // The TaskResponseHeader struct is the struct that is signed and sent to the contract as a task response.
-func (o *Operator) ProcessNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSquaringTaskManagerNewTaskCreated) *cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse {
+func (o *Operator) ProcessNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.ContractIncredibleSummingTaskManagerNewTaskCreated) *cstaskmanager.IIncredibleSummingTaskManagerTaskResponse {
 	o.logger.Debug("Received new task", "task", newTaskCreatedLog)
 	o.logger.Info("Received new task",
 		"numberToBeSquared", newTaskCreatedLog.Task.NumberToBeSquared,
@@ -318,14 +318,14 @@ func (o *Operator) ProcessNewTaskCreatedLog(newTaskCreatedLog *cstaskmanager.Con
 		"QuorumThresholdPercentage", newTaskCreatedLog.Task.QuorumThresholdPercentage,
 	)
 	numberSquared := big.NewInt(0).Exp(newTaskCreatedLog.Task.NumberToBeSquared, big.NewInt(2), nil)
-	taskResponse := &cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse{
+	taskResponse := &cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 		ReferenceTaskIndex: newTaskCreatedLog.TaskIndex,
 		NumberSquared:      numberSquared,
 	}
 	return taskResponse
 }
 
-func (o *Operator) SignTaskResponse(taskResponse *cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse) (*aggregator.SignedTaskResponse, error) {
+func (o *Operator) SignTaskResponse(taskResponse *cstaskmanager.IIncredibleSummingTaskManagerTaskResponse) (*aggregator.SignedTaskResponse, error) {
 	taskResponseHash, err := core.GetTaskResponseDigest(taskResponse)
 	if err != nil {
 		o.logger.Error("Error getting task response header hash. skipping task (this is not expected and should be investigated)", "err", err)

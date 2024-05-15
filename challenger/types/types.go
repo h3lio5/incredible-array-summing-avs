@@ -3,12 +3,12 @@ package types
 import (
 	"errors"
 
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 )
 
 type TaskResponseData struct {
-	TaskResponse              cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse
-	TaskResponseMetadata      cstaskmanager.IIncredibleSquaringTaskManagerTaskResponseMetadata
+	TaskResponse              cstaskmanager.IIncredibleSummingTaskManagerTaskResponse
+	TaskResponseMetadata      cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata
 	NonSigningOperatorPubKeys []cstaskmanager.BN254G1Point
 }
 

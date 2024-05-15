@@ -19,7 +19,7 @@ import (
 
 	"github.com/h3lio5/incredible-array-summing-avs/aggregator/mocks"
 	"github.com/h3lio5/incredible-array-summing-avs/aggregator/types"
-	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSquaringTaskManager"
+	cstaskmanager "github.com/h3lio5/incredible-array-summing-avs/contracts/bindings/IncredibleSummingTaskManager"
 	chainiomocks "github.com/h3lio5/incredible-array-summing-avs/core/chainio/mocks"
 )
 
@@ -87,8 +87,8 @@ func createMockAggregator(
 		logger:                logger,
 		avsWriter:             mockAvsWriter,
 		blsAggregationService: mockBlsAggregationService,
-		tasks:                 make(map[types.TaskIndex]cstaskmanager.IIncredibleSquaringTaskManagerTask),
-		taskResponses:         make(map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSquaringTaskManagerTaskResponse),
+		tasks:                 make(map[types.TaskIndex]cstaskmanager.IIncredibleSummingTaskManagerTask),
+		taskResponses:         make(map[types.TaskIndex]map[sdktypes.TaskResponseDigest]cstaskmanager.IIncredibleSummingTaskManagerTaskResponse),
 	}
 	return aggregator, mockAvsWriter, mockBlsAggregationService, nil
 }
