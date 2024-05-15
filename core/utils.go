@@ -20,8 +20,8 @@ func AbiEncodeTaskResponse(h *cstaskmanager.IIncredibleSummingTaskManagerTaskRes
 			Type: "uint32",
 		},
 		{
-			Name: "numberSquared",
-			Type: "uint256",
+			Name: "arraySummed",
+			Type: "uint64",
 		},
 	})
 	if err != nil {
