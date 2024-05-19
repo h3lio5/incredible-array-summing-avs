@@ -7,4 +7,4 @@ aggregator_server_ip_port_address: localhost:8090
 # avail seed, api url, app_id
 avail_seed: "bottom drive obey lake curtain smoke basket hold race lonely fit walk//Alice"
 avail_api_url: ws://127.0.0.1:9944
-avail_app_id: 0 
+avail_app_id: 1

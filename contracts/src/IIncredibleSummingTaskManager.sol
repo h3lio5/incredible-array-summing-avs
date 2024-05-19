@@ -2,8 +2,12 @@
 pragma solidity ^0.8.9;
 
 import "@eigenlayer-middleware/src/libraries/BN254.sol";
+import {IBLSSignatureChecker} from "@eigenlayer-middleware/src/interfaces/IBLSSignatureChecker.sol";
+
+
 
 interface IIncredibleSummingTaskManager {
+
     // EVENTS
     event NewTaskCreated(uint32 indexed taskIndex, Task task);
 
@@ -51,8 +55,8 @@ interface IIncredibleSummingTaskManager {
     // It thus cannot be signed by operators, so we keep it in a separate struct than TaskResponse
     // This metadata is needed by the challenger, so we emit it in the TaskResponded event
     struct TaskResponseMetadata {
-        uint32 taskResponsedBlock;
-        bytes32 hashOfNonSigners;
+        uint64 taskResponsedBlocktime;
+        // bytes32 hashOfNonSigners; // this is not needed when the aggregator posts the data to an external da like avail.
     }
 
     // FUNCTIONS
@@ -67,12 +71,12 @@ interface IIncredibleSummingTaskManager {
     function taskNumber() external view returns (uint32);
 
     // // NOTE: this function raises challenge to existing tasks.
-    function raiseAndResolveChallenge(
-        Task calldata task,
-        TaskResponse calldata taskResponse,
-        TaskResponseMetadata calldata taskResponseMetadata,
-        BN254.G1Point[] memory pubkeysOfNonSigningOperators
-    ) external;
+    // function raiseAndResolveChallenge(
+    //     Task calldata task,
+    //     TaskResponse calldata taskResponse,
+    //     TaskResponseMetadata calldata taskResponseMetadata,
+    //     NonSignerStakesAndSignature memory nonSignerStakesAndSignature
+    // ) external;
 
     /// @notice Returns the TASK_RESPONSE_WINDOW_BLOCK
     function getTaskResponseWindowBlock() external view returns (uint32);

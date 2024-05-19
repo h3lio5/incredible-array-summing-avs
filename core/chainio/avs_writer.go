@@ -30,11 +30,6 @@ type AvsWriterer interface {
 		task cstaskmanager.IIncredibleSummingTaskManagerTask,
 		taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
 		taskResponseMetadata cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata,
-		pubkeysOfNonSigningOperators []cstaskmanager.BN254G1Point,
-	) (*types.Receipt, error)
-	SendAggregatedResponse(ctx context.Context,
-		task cstaskmanager.IIncredibleSummingTaskManagerTask,
-		taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
 		nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature,
 	) (*types.Receipt, error)
 }
@@ -99,9 +94,11 @@ func (w *AvsWriter) SendNewTaskArrayToSum(ctx context.Context, arrayToSum [3]uin
 	return newTaskCreatedEvent.Task, newTaskCreatedEvent.TaskIndex, nil
 }
 
-func (w *AvsWriter) SendAggregatedResponse(
-	ctx context.Context, task cstaskmanager.IIncredibleSummingTaskManagerTask,
+func (w *AvsWriter) RaiseChallenge(
+	ctx context.Context,
+	task cstaskmanager.IIncredibleSummingTaskManagerTask,
 	taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
+	taskResponseMetadata cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata,
 	nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature,
 ) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
@@ -109,32 +106,7 @@ func (w *AvsWriter) SendAggregatedResponse(
 		w.logger.Errorf("Error getting tx opts")
 		return nil, err
 	}
-	tx, err := w.AvsContractBindings.TaskManager.RespondToTask(txOpts, task, taskResponse, nonSignerStakesAndSignature)
-	if err != nil {
-		w.logger.Error("Error submitting SubmitTaskResponse tx while calling respondToTask", "err", err)
-		return nil, err
-	}
-	receipt, err := w.TxMgr.Send(ctx, tx)
-	if err != nil {
-		w.logger.Errorf("Error submitting respondToTask tx")
-		return nil, err
-	}
-	return receipt, nil
-}
-
-func (w *AvsWriter) RaiseChallenge(
-	ctx context.Context,
-	task cstaskmanager.IIncredibleSummingTaskManagerTask,
-	taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse,
-	taskResponseMetadata cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata,
-	pubkeysOfNonSigningOperators []cstaskmanager.BN254G1Point,
-) (*types.Receipt, error) {
-	txOpts, err := w.TxMgr.GetNoSendTxOpts()
-	if err != nil {
-		w.logger.Errorf("Error getting tx opts")
-		return nil, err
-	}
-	tx, err := w.AvsContractBindings.TaskManager.RaiseAndResolveChallenge(txOpts, task, taskResponse, taskResponseMetadata, pubkeysOfNonSigningOperators)
+	tx, err := w.AvsContractBindings.TaskManager.RaiseAndResolveChallenge(txOpts, task, taskResponse, taskResponseMetadata, nonSignerStakesAndSignature)
 	if err != nil {
 		w.logger.Errorf("Error assembling RaiseChallenge tx")
 		return nil, err

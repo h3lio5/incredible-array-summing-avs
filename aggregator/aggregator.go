@@ -2,6 +2,7 @@ package aggregator
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -135,8 +136,8 @@ func (agg *Aggregator) Start(ctx context.Context) error {
 	go agg.startServer(ctx)
 
 	// TODO(soubhik): refactor task generation/sending into a separate function that we can run as goroutine
-	ticker := time.NewTicker(10 * time.Second)
-	agg.logger.Infof("Aggregator set to send new task every 10 seconds...")
+	ticker := time.NewTicker(20 * time.Second)
+	agg.logger.Infof("Aggregator set to send new task every 20 seconds...")
 	defer ticker.Stop()
 	taskNum := uint64(0)
 	// ticker doesn't tick immediately, so we send the first task here
@@ -194,23 +195,25 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp blsagg
 		"taskIndex", blsAggServiceResp.TaskIndex,
 	)
 	agg.tasksMu.RLock()
-	task := agg.tasks[blsAggServiceResp.TaskIndex]
+	_ = agg.tasks[blsAggServiceResp.TaskIndex]
 	agg.tasksMu.RUnlock()
 	agg.taskResponsesMu.RLock()
 	taskResponse := agg.taskResponses[blsAggServiceResp.TaskIndex][blsAggServiceResp.TaskResponseDigest]
 	agg.taskResponsesMu.RUnlock()
 	// TODO: instead of sending the (task, taskResponse, nonSignerStakesAndSignature) to the contract, serialize the tuple and submit it to avail da node.
-	// serialize (task, taskResponse, nonSignerStakesAndSignature) into a string
-	serializedData, err := serializeResult(task, taskResponse, nonSignerStakesAndSignature)
+	// serialize (taskResponse, timeStamp, nonSignerStakesAndSignature) into a string
+	serializedData, err := agg.serializeResult(taskResponse, nonSignerStakesAndSignature)
 	if err != nil {
 		agg.logger.Error("Aggregator failed to serialize the result", err)
 	}
 
 	// submit the serialized data to avail da node
-	_, err = agg.submitResultDataToAvailDA(serializedData)
+	availTxHash, err := agg.submitResultDataToAvailDA(serializedData)
 	if err != nil {
 		agg.logger.Errorf("Aggregator failed to respond to the task", "err", err)
 	}
+
+	agg.logger.Infof("Result data submitted to Avail DA at tx hash", availTxHash)
 }
 
 // sendNewTask sends a new task to the task manager contract, and updates the Task dict struct
@@ -243,11 +246,37 @@ func (agg *Aggregator) sendNewTask(arrayToSum [3]uint64) error {
 	return nil
 }
 
-func serializeResult(task cstaskmanager.IIncredibleSummingTaskManagerTask, taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse, nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (string, error) {
-	return "a", nil
+type ResultToAvailDa struct {
+	TaskResponse                cstaskmanager.IIncredibleSummingTaskManagerTaskResponse
+	TaskResponseMetadata        cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata
+	NonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature
 }
 
-func (agg *Aggregator) submitResultDataToAvailDA(data string) (string, error) {
+func (agg *Aggregator) serializeResult(taskResponse cstaskmanager.IIncredibleSummingTaskManagerTaskResponse, nonSignerStakesAndSignature cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature) ([]byte, error) {
+
+	taskResponseMetadata := cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata{
+		TaskResponsedBlocktime: uint64(time.Now().Unix()),
+	}
+
+	resultToAvailDa := ResultToAvailDa{
+		taskResponse,
+		taskResponseMetadata,
+		nonSignerStakesAndSignature,
+	}
+
+	resultJson, err := json.Marshal(resultToAvailDa)
+	if err != nil {
+		agg.logger.Errorf("serializing result data failed, cannot post to DA", err)
+		return []byte{}, err
+	}
+
+	agg.logger.Infof("Serialized Data: %v", string(resultJson))
+	agg.logger.Infof("Serialized Data Raw: %v", resultJson)
+
+	return resultJson, nil
+}
+
+func (agg *Aggregator) submitResultDataToAvailDA(data []byte) (string, error) {
 
 	meta, err := agg.availApi.RPC.State.GetMetadataLatest()
 	if err != nil {
@@ -255,7 +284,7 @@ func (agg *Aggregator) submitResultDataToAvailDA(data string) (string, error) {
 		return "", err
 	}
 
-	c, err := gsubtypes.NewCall(meta, "DataAvailability.submit_data", gsubtypes.NewBytes([]byte(data)))
+	c, err := gsubtypes.NewCall(meta, "DataAvailability.submit_data", gsubtypes.NewBytes(data))
 	if err != nil {
 		agg.logger.Errorf("[Avail DA] cannot create new call:%w", err)
 		return "", nil
@@ -296,11 +325,10 @@ func (agg *Aggregator) submitResultDataToAvailDA(data string) (string, error) {
 		GenesisHash:        genesisHash,
 		Nonce:              gsubtypes.NewUCompactFromUInt(uint64(nonce)),
 		SpecVersion:        rv.SpecVersion,
-		Tip:                gsubtypes.NewUCompactFromUInt(0),
+		Tip:                gsubtypes.NewUCompactFromUInt(1),
 		AppID:              gsubtypes.NewUCompactFromUInt(uint64(agg.availAppId)),
 		TransactionVersion: rv.TransactionVersion,
 	}
-
 	// Sign the transaction using Alice's default account
 	err = ext.Sign(agg.availKeyringPair, o)
 	if err != nil {
@@ -311,7 +339,7 @@ func (agg *Aggregator) submitResultDataToAvailDA(data string) (string, error) {
 	// Send the extrinsic
 	hash, err := agg.availApi.RPC.Author.SubmitExtrinsic(ext)
 	if err != nil {
-		agg.logger.Errorf("[Avail DA] cannot submit extrinsic:%w", err)
+		agg.logger.Errorf("[Avail DA] cannot submit extrinsic:%v", err)
 		return "", nil
 	}
 

@@ -40,22 +40,21 @@ func TestCallChallengeModule(t *testing.T) {
 	const BLOCK_NUMBER = uint32(100)
 
 	challenger.tasks[TASK_INDEX] = cstaskmanager.IIncredibleSummingTaskManagerTask{
-		NumberToBeSquared:         big.NewInt(3),
+		ArrayToBeSummed:           [3]uint64{1, 1, 1},
 		TaskCreatedBlock:          1000,
 		QuorumNumbers:             aggtypes.QUORUM_NUMBERS.UnderlyingType(),
 		QuorumThresholdPercentage: uint32(aggtypes.QUORUM_THRESHOLD_NUMERATOR),
 	}
 
-	challenger.taskResponses[TASK_INDEX] = chtypes.TaskResponseData{
+	challenger.taskResponses[TASK_INDEX] = ResultToAvailDa{
 		TaskResponse: cstaskmanager.IIncredibleSummingTaskManagerTaskResponse{
 			ReferenceTaskIndex: TASK_INDEX,
-			NumberSquared:      big.NewInt(2),
+			ArraySummed:        3,
 		},
 		TaskResponseMetadata: cstaskmanager.IIncredibleSummingTaskManagerTaskResponseMetadata{
-			TaskResponsedBlock: 1001,
-			HashOfNonSigners:   [32]byte{},
+			TaskResponsedBlocktime: 1001,
 		},
-		NonSigningOperatorPubKeys: []cstaskmanager.BN254G1Point{},
+		NonSignerStakesAndSignature: cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature{},
 	}
 
 	mockAvsWriterer.EXPECT().RaiseChallenge(
@@ -63,7 +62,7 @@ func TestCallChallengeModule(t *testing.T) {
 		challenger.tasks[TASK_INDEX],
 		challenger.taskResponses[TASK_INDEX].TaskResponse,
 		challenger.taskResponses[TASK_INDEX].TaskResponseMetadata,
-		challenger.taskResponses[TASK_INDEX].NonSigningOperatorPubKeys,
+		challenger.taskResponses[TASK_INDEX].NonSignerStakesAndSignature,
 	).Return(mocks.MockRaiseAndResolveChallengeCall(BLOCK_NUMBER, TASK_INDEX), nil)
 
 	msg := challenger.callChallengeModule(TASK_INDEX)

@@ -41,6 +41,36 @@ func AbiEncodeTaskResponse(h *cstaskmanager.IIncredibleSummingTaskManagerTaskRes
 	return bytes, nil
 }
 
+func AbiEncodeNonSignerStakesAndSignature(h *cstaskmanager.IBLSSignatureCheckerNonSignerStakesAndSignature) ([]byte, error) {
+
+	// The order here has to match the field ordering of cstaskmanager.IIncredibleSummingTaskManagerTaskResponse
+	taskResponseType, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
+		{
+			Name: "referenceTaskIndex",
+			Type: "uint32",
+		},
+		{
+			Name: "arraySummed",
+			Type: "uint64",
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	arguments := abi.Arguments{
+		{
+			Type: taskResponseType,
+		},
+	}
+
+	bytes, err := arguments.Pack(h)
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes, nil
+}
+
 // GetTaskResponseDigest returns the hash of the TaskResponse, which is what operators sign over
 func GetTaskResponseDigest(h *cstaskmanager.IIncredibleSummingTaskManagerTaskResponse) ([32]byte, error) {
 

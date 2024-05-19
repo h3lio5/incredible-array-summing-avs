@@ -98,31 +98,28 @@ contract IncredibleSummingTaskManager is
         latestTaskNum = latestTaskNum + 1;
     }
 
-    // NOTE: this function responds to existing tasks.
-    function respondToTask(
+    function taskNumber() external view returns (uint32) {
+        return latestTaskNum;
+    }
+
+    // NOTE: this function enables a challenger to raise and resolve a challenge.
+    // TODO: require challenger to pay a bond for raising a challenge
+    // TODO(samlaf): should we check that quorumNumbers is same as the one recorded in the task?
+    function raiseAndResolveChallenge(
         Task calldata task,
         TaskResponse calldata taskResponse,
+        TaskResponseMetadata calldata taskResponseMetadata,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    ) external onlyAggregator {
+    ) external {
+        uint32 referenceTaskIndex = taskResponse.referenceTaskIndex;
+        uint64[3] calldata arrayToBeSummed = task.arrayToBeSummed;
         uint32 taskCreatedBlock = task.taskCreatedBlock;
         bytes calldata quorumNumbers = task.quorumNumbers;
         uint32 quorumThresholdPercentage = task.quorumThresholdPercentage;
 
-        // check that the task is valid, hasn't been responsed yet, and is being responsed in time
         require(
-            keccak256(abi.encode(task)) ==
-                allTaskHashes[taskResponse.referenceTaskIndex],
-            "supplied task does not match the one recorded in the contract"
-        );
-        // some logical checks
-        require(
-            allTaskResponses[taskResponse.referenceTaskIndex] == bytes32(0),
-            "Aggregator has already responded to the task"
-        );
-        require(
-            uint32(block.number) <=
-                taskCreatedBlock + TASK_RESPONSE_WINDOW_BLOCK,
-            "Aggregator has responded to the task too late"
+            taskSuccesfullyChallenged[referenceTaskIndex] == false,
+            "The response to this task has already been challenged successfully."
         );
 
         /* CHECKING SIGNATURES & WHETHER THRESHOLD IS MET OR NOT */
@@ -153,52 +150,9 @@ contract IncredibleSummingTaskManager is
             );
         }
 
-        TaskResponseMetadata memory taskResponseMetadata = TaskResponseMetadata(
-            uint32(block.number),
-            hashOfNonSigners
-        );
-        // updating the storage with task responsea
-        allTaskResponses[taskResponse.referenceTaskIndex] = keccak256(
-            abi.encode(taskResponse, taskResponseMetadata)
-        );
-
-        // emitting event
-        emit TaskResponded(taskResponse, taskResponseMetadata);
-    }
-
-    function taskNumber() external view returns (uint32) {
-        return latestTaskNum;
-    }
-
-    // NOTE: this function enables a challenger to raise and resolve a challenge.
-    // TODO: require challenger to pay a bond for raising a challenge
-    // TODO(samlaf): should we check that quorumNumbers is same as the one recorded in the task?
-    function raiseAndResolveChallenge(
-        Task calldata task,
-        TaskResponse calldata taskResponse,
-        TaskResponseMetadata calldata taskResponseMetadata,
-        BN254.G1Point[] memory pubkeysOfNonSigningOperators
-    ) external {
-        uint32 referenceTaskIndex = taskResponse.referenceTaskIndex;
-        uint64[3] calldata arrayToBeSummed = task.arrayToBeSummed;
-        // some logical checks
-        require(
-            allTaskResponses[referenceTaskIndex] != bytes32(0),
-            "Task hasn't been responded to yet"
-        );
-        require(
-            allTaskResponses[referenceTaskIndex] ==
-                keccak256(abi.encode(taskResponse, taskResponseMetadata)),
-            "Task response does not match the one recorded in the contract"
-        );
-        require(
-            taskSuccesfullyChallenged[referenceTaskIndex] == false,
-            "The response to this task has already been challenged successfully."
-        );
-
         require(
             uint32(block.number) <=
-                taskResponseMetadata.taskResponsedBlock +
+                taskResponseMetadata.taskResponsedBlocktime +
                     TASK_CHALLENGE_WINDOW_BLOCK,
             "The challenge period for this task has already expired."
         );
@@ -219,35 +173,36 @@ contract IncredibleSummingTaskManager is
 
         // get the list of hash of pubkeys of operators who weren't part of the task response submitted by the aggregator
         bytes32[] memory hashesOfPubkeysOfNonSigningOperators = new bytes32[](
-            pubkeysOfNonSigningOperators.length
+            nonSignerStakesAndSignature.nonSignerPubkeys.length
         );
-        for (uint i = 0; i < pubkeysOfNonSigningOperators.length; i++) {
+        for (uint i = 0; i < nonSignerStakesAndSignature.nonSignerPubkeys.length; i++) {
             hashesOfPubkeysOfNonSigningOperators[
                 i
-            ] = pubkeysOfNonSigningOperators[i].hashG1Point();
+            ] = nonSignerStakesAndSignature.nonSignerPubkeys[i].hashG1Point();
         }
 
+        // NOTE: THE BELOW CHECK IS NOT NEEDED BECAUSE THE AGGREGATOR PUBLISHES DATA ALONG WITH A SIGNATURE DIRECTLY TO THE DA LAYER.
         // verify whether the pubkeys of "claimed" non-signers supplied by challenger are actually non-signers as recorded before
         // when the aggregator responded to the task
         // currently inlined, as the MiddlewareUtils.computeSignatoryRecordHash function was removed from BLSSignatureChecker
         // in this PR: https://github.com/Layr-Labs/eigenlayer-contracts/commit/c836178bf57adaedff37262dff1def18310f3dce#diff-8ab29af002b60fc80e3d6564e37419017c804ae4e788f4c5ff468ce2249b4386L155-L158
         // TODO(samlaf): contracts team will add this function back in the BLSSignatureChecker, which we should use to prevent potential bugs from code duplication
-        bytes32 signatoryRecordHash = keccak256(
-            abi.encodePacked(
-                task.taskCreatedBlock,
-                hashesOfPubkeysOfNonSigningOperators
-            )
-        );
-        require(
-            signatoryRecordHash == taskResponseMetadata.hashOfNonSigners,
-            "The pubkeys of non-signing operators supplied by the challenger are not correct."
-        );
+        // bytes32 signatoryRecordHash = keccak256(
+        //     abi.encodePacked(
+        //         task.taskCreatedBlock,
+        //         hashesOfPubkeysOfNonSigningOperators
+        //     )
+        // );
+        // require(
+        //     signatoryRecordHash == taskResponseMetadata.hashOfNonSigners,
+        //     "The pubkeys of non-signing operators supplied by the challenger are not correct."
+        // );
 
         // get the address of operators who didn't sign
         address[] memory addresssOfNonSigningOperators = new address[](
-            pubkeysOfNonSigningOperators.length
+            nonSignerStakesAndSignature.nonSignerPubkeys.length
         );
-        for (uint i = 0; i < pubkeysOfNonSigningOperators.length; i++) {
+        for (uint i = 0; i < nonSignerStakesAndSignature.nonSignerPubkeys.length; i++) {
             addresssOfNonSigningOperators[i] = BLSApkRegistry(
                 address(blsApkRegistry)
             ).pubkeyHashToOperator(hashesOfPubkeysOfNonSigningOperators[i]);
